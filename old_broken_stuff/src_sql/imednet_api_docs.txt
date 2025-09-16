@@ -1,0 +1,2390 @@
+=== https://portal.prod.imednetapi.com/docs/common ===
+Mednet EDC REST API Overview
+The Mednet EDC (Electronic Data Capture) REST API provides a single-point of access for reading data stored across iMednet data services. The API exposes data externally, such that a Sponsor, CRO, or other validated client can access the data using HTTP GET requests from a server or even web browser, provided the client can validate the required security credentials.
+This level of data access allows iMednet users to read, store, analyze, and re-present data in a multitude of ways, including, but not limited to:
+Export to a 3rd party reporting tool
+Presenting data in a separate application, mobile app, or web site
+Storing in a data warehouse
+Compiling a custom audit trail
+The Mednet EDC REST API returns all requests in JSON format (application/json). The JSON format (JavaScript Object Notation) provides flexibility and simplifies the task of manipulating data.
+The documentation presented here will show you how to read and query data from the API based upon the object attributes.
+Base URL
+The address URL to access the API is the following:
+https://edc.prod.imednetapi.com
+To make requests, append the
+route
+of the endpoint to the base URL. For example, to make a request to the studies endpoint '/api/v1/edc/studies' use the following:
+https://edc.prod.imednetapi.com/api/v1/edc/studies
+Security and Validation
+API keys should remain secure. Mednet does not recommend sharing keys or making them public. Publicly exposing your credentials can result in your account being compromised. Some implementation decisions can expose keys and should be avoided wherever possible (e.g. CORS).
+Making a successful request requires authentication using request headers. Valid values for the request header attributes named
+x-api-key
+and
+x-imn-security-key
+are required to ensure secure access to your data. The content of your header might look something like the following:
+{
+    "x-api-key": "your-imednet-supplied-api-key",
+    "x-imn-security-key": "your-imednet-supplied-security-key"
+}
+Example request using
+curl
+to request
+sites
+from
+STUDYKEY
+:
+curl -X GET https://edc.prod.imednetapi.com/api/v1/edc/studies/STUDYKEY/sites -H 'x-api-key: XXXXXXXX' -H 'x-imn-security-key: XXX-XXX-XX-XXXXXX' -H 'Content-Type: application/json'
+HTTP verbs
+Verb
+Usage
+GET
+Used to retrieve a resource
+POST
+Used to insert data
+Status code
+Usage
+200 OK
+The request completed successfully
+400 Bad Request
+The request was malformed. The response body will include an error providing further information
+401 Unauthorized
+The request was rejected related to security issue. The response body will include an error providing further information
+403 Forbidden
+The request was rejected related to security issue, likely an invalid studyKey. The response body will include an error providing further information.
+404 Not Found
+The request was rejected related to invalid resource issue. The response body will include an error providing further information
+429 Too Many Requests
+The request was rejected related to limit-exceeding requests. Please contact Mednet support for assistance
+500 Internal server error
+The request was rejected because of unknown issue. Please contact Mednet support for assistance
+Resources
+Filtering
+iMednet REST API allows consumers to filter results by providing optional filtering criteria.
+However, filter criteria must meet specific syntax as below:
+Attributes
+Filter attribute must match (case sensitive) with end point response. Attributes vary for each endpoint, to see all
+attributes associated with each endpoint, view the specific endpoint documentation.
+Table 1. Key Attributes
+End point
+Key Attributes
+Study
+studyKey, studyType, studyName, dateCreated, dateModified
+Site
+siteId, siteName, siteEnrollmentStatus, dateCreated, dateModified
+Form
+formId, formKey, formName, formType, dateCreated, dateModified
+Visit
+intervalId, intervalName, intervalGroupId, intervalGroupName, dateCreated, dateModified
+Record
+intervalId, formId, formKey, siteId, recordId, parentRecordId, recordType, recordStatus, subjectKey, dateCreated, dateModified
+Record Revision
+recordRevisionId, recordId, recordOid, recordRevision, dataRevision, recordStatus, user, reasonForChange, dateCreated
+Variable
+variableId, variableType, variableName, dateCreated, dateModified, formId, formKey, formName, label
+Coding
+siteId, subjectId, formId, recordId, revision, variable, value, code, codedBy, reason, dictionaryName, dictionaryVersion, dateCoded
+Operators
+The following operators are supported:
+Table 2. Operator
+Operator
+Info
+<
+less then
+⇐
+less equal then
+>
+greater than
+>=
+greater equal than
+==
+equal
+!=
+not equal
+Connectors
+Connectors are used to join filter criteria together.  The following connectors are supported:
+Table 3. Connector
+Connector
+Info
+and
+And condition
+;
+And condition
+or
+Or condition
+,
+Or condition
+Date
+Dates are returned in UTC. It is possible to search dates on any supported date attribute.
+Use UTC format when filtering for dates, except when searching for startDate, dueDate, endDate, and visitDate for the
+visits endpoint. For startDate, dueDate, endDate, and visitDate for the visits endpoint, use YYYY-MM-DD format.
+Table 4. Date
+Attribute
+Details
+dateCreated
+The timestamp when the entity was created
+dateModified
+The timestamp when the entity was last modified
+startDate (specific to Visits endpoint)
+Subject visit Start Date defined in interval visit window
+endDate (specific to Visits endpoint)
+Subject visit End Date defined in interval visit window
+dueDate (specific to Visits endpoint)
+Subject visit Due Date defined in interval visit window
+visitDate (specific to Visits endpoint)
+Subject visit Date defined in interval visit window
+Table 5. Date format
+Date format
+Info
+YYYY-MM-DDTHH:MM:SSZ
+UTC time
+YYYY-MM-DDTHH:MM:SS-06:00
+CST time, which is 6 hours behind UTC time
+YYYY-MM-DD
+Date without time, specific to startDate, dueDate, endDate, and visitDate for the visits endpoint
+Filter Examples
+Table 6. Filter Examples
+Filter Value
+Expected Result
+formId > 10
+Return all forms with a Form ID greater than 10
+formType == "SUBJECT"
+Return all subject-related Forms
+formId > 10;formType == "SUBJECT"
+Return all subject-related Forms with a Form ID greater than 10
+formId > 10 and formType == "SUBJECT"
+formId > 10,formType == "SUBJECT"
+Return all subject-related Forms or Forms with a Form ID greater than 10
+formId > 10 or formType == "SUBJECT"
+dateCreated>2000-11-05T08:00:00-06:00
+Return all entities created after November 5, 2000 08:00:00 CST
+dateCreated>2000-11-05T14:00:00Z
+Return all entities created after November 5, 2000 14:00:00 UTC
+visitDate<2019-03-19
+Returns all entities where the visitDate occured before March 19, 2019
+Filtering on Record Data
+recordData
+is not a fixed structure, since each clinical form has its own structure determined by the study protocol and configured within the iMednet form designer.
+For this reason, a special request parameter,
+recordDataFilter
+, is available to indicate how to filter a set of records based upon values for questions.
+This request parameter is optional, and is separate from the
+filter
+request parameter that operates on the structured record attributes such as
+recordId
+or
+formKey
+.
+In short,
+recordDataFilter
+is only used to query
+within
+the
+recordData
+attribute.
+The recordDataFilter request parameter currently supports the use of the ";" (AND) or the "," (OR) connector, but not both at the same time.
+Please refer to Filtering for more details about the
+filter
+query parameter.
+Syntax
+Record data filter criteria must meet specific syntax as below:
+Table 7. Record data filter
+Operator
+Info
+<
+less then
+⇐
+less equal then
+>
+greater than
+>=
+greater equal than
+==
+equal
+!=
+not equal
+=~
+contains (case insensitive, accepts regex, must escape special regex characters)
+Separator
+Each field in record data filter must be separated by ";" (AND) or "," (OR) value. Currently the API does not support the use of both. A bad request will be returned if both the ";" and "," connectors are used in the same recordDataFilter.
+Table 8. Connector
+Connector
+Info
+;
+And condition
+,
+Or condition
+RecordDataFilter Examples
+Table 9. Filter Examples
+Filter Value
+Expected Result
+AESER==Serious
+Return all serious adverse events
+AESER==Serious;GENDER==Male
+Return all serious adverse events for male subjects
+AESER==Bronchitis,AGE>65
+Return all records where bronchitis occurred or if age is greater than sixty-five
+AESER==bronch
+Returns all serious adverse events that contain "bronch"
+AESER==Bronchitis;GENDER==Male,AGE>=65
+Returns 400 Bad Request
+Pre-conditions
+The criteria below must be met in order to perform a valid query:
+Table 10. Criteria
+Criteria
+Example
+Semicolon (;) must be used to separate filter
+number>1;name==John
+White space is not allowed between key, operator, or value
+number > 1 is invalid. number>1 is valid
+Value must follow right after operator
+name==John will search all name that match John. name=="John" will search all name that match "John"
+Unique attribute is required
+name==John;name!=John is invalid
+dateCreated and dateModified are date in UTC format
+dateCreated>2018 is invalid. dateCreated>2018-01-01T06:00:00Z is valid
+All searches are case sensitive
+name==John. This will search all name that has value of John.
+
+=== https://portal.prod.imednetapi.com/docs/error ===
+Error
+When an error occurs during a service call, error details will be produced under the metadata section along with
+an associated detailed message.  In many cases, this information may be used to identify improperly initiated
+requests, such as a required parameter not being included in the request payload
+Response body
+Below is example of error response raised by validation errors.
+{
+  "metadata" : {
+    "status" : "BAD_REQUEST",
+    "path" : "/api/v1/edc/studies",
+    "timestamp" : "2018-10-18 05:46:29",
+    "error" : {
+      "code" : "1000",
+      "description" : "Field raised validation errors",
+      "field" : {
+        "attribute" : "page",
+        "value" : "XX"
+      }
+    }
+  }
+}
+Error response fields
+Path
+Type
+Description
+code
+String
+Error code
+description
+String
+Error description message
+field.attribute
+String
+Origination request attribute which caused the error
+field.value
+String
+The value of request attribute passed in the request
+Error codes
+Error code
+Description
+1000
+Validation error. Request contain invalid value.
+9000
+Unknown error. Please contact Mednet support for assistance.
+9001
+Unauthorized error. Insufficient permission to retrieve data.
+
+=== https://portal.prod.imednetapi.com/docs/forms ===
+Forms endpoint
+Given a StudyKey, fetch the set of forms. A form is a design resource that represents an electronic clinical case
+report form (eCRF).  A single form contains many questions. It is related to records in that each record is a single
+instance of a form for a given subject.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/PHARMADEMO/forms?page=0&size=25&sort=formId%2CASC&filter=formId%3D%3D10265 HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/forms
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of forms
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+formId,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to filter section for details.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/PHARMADEMO/forms",
+    "timestamp" : "2025-06-05 21:12:09",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "formId",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "studyKey" : "PHARMADEMO",
+    "formId" : 1,
+    "formKey" : "FORM_1",
+    "formName" : "Mock Form 1",
+    "formType" : "Subject",
+    "revision" : 1,
+    "embeddedLog" : false,
+    "enforceOwnership" : false,
+    "userAgreement" : false,
+    "subjectRecordReport" : false,
+    "unscheduledVisit" : false,
+    "otherForms" : false,
+    "eproForm" : false,
+    "allowCopy" : true,
+    "disabled" : false,
+    "dateCreated" : "2025-06-05 21:12:09",
+    "dateModified" : "2025-06-05 21:12:10"
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detail error message from request if error occur
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages return from search
+pagination.totalElements
+Number
+Total elements return from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].studyKey
+String
+Unique study key for a given study
+data[].formId
+Number
+Mednet Form ID
+data[].formKey
+String
+Form key
+data[].formName
+String
+Name of the eCRF
+data[].formType
+String
+eCRF Type. For example: Subject/Site
+data[].revision
+Number
+Number of modifications of the form metadata
+data[].embeddedLog
+Boolean
+Embedded Log checkbox value on the form attributes
+data[].enforceOwnership
+Boolean
+Enforce Ownership checkbox value on the form attributes
+data[].userAgreement
+Boolean
+User Agreement checkbox value on the form attributes
+data[].subjectRecordReport
+Boolean
+Subject Record Report checkbox value on the form attributes
+data[].unscheduledVisit
+Boolean
+Include in Unscheduled Visits checkbox value on the form attributes
+data[].otherForms
+Boolean
+Include in Other Forms checkbox value on the form attributes
+data[].eproForm
+Boolean
+Is ePRO checkbox value on the form attributes
+data[].allowCopy
+Boolean
+Allow Copy checkbox value on the form attributes
+data[].disabled
+Boolean
+Form is soft delete status
+data[].dateCreated
+String
+Date when this form was created
+data[].dateModified
+String
+Date when this form was last modified
+
+=== https://portal.prod.imednetapi.com/docs/header ===
+Header
+Header is required in all endpoints.
+Request header
+Name
+Description
+Accept
+Supported server response media type. Must be application/json
+x-api-key
+Valid API key
+x-imn-security-key
+Valid security key
+Content-Type
+Supported server response media type. Must be application/json
+Response header
+Name
+Description
+Content-Type
+Supported request content type of the payload. Must be application/json
+
+=== https://portal.prod.imednetapi.com/docs/intervals ===
+Intervals endpoint
+Given a StudyKey, fetch the set of intervals. An interval is a design resource that represents a set of forms
+that must be completed for each subject in a study.  It is related to visits in that each visit is a single
+instance of an interval for a given subject.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/PHARMADEMO/intervals?page=0&size=25&sort=intervalId%2CASC&filter=intervalId%3D%3D161 HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/intervals
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of intervals
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+intervalId,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to filter section for details.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/PHARMADEMO/intervals",
+    "timestamp" : "2025-06-05 21:12:08",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "intervalId",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "studyKey" : "PHARMADEMO",
+    "intervalId" : 1,
+    "intervalName" : "Day 1",
+    "intervalDescription" : "Day 1",
+    "intervalSequence" : 110,
+    "intervalGroupId" : 10,
+    "intervalGroupName" : "ePRO",
+    "disabled" : true,
+    "dateCreated" : "2025-06-05 21:12:08",
+    "dateModified" : "2025-06-05 21:12:09",
+    "timeline" : "Start Date End Date",
+    "definedUsingInterval" : "Baseline",
+    "windowCalculationForm" : "Procedure",
+    "windowCalculationDate" : "PROCDT",
+    "actualDateForm" : "Follow Up",
+    "actualDate" : "FUDT",
+    "dueDateWillBeIn" : 30,
+    "negativeSlack" : 7,
+    "positiveSlack" : 7,
+    "eproGracePeriod" : 2,
+    "forms" : [ {
+      "formId" : 123,
+      "formKey" : "MY-FORM-KEY",
+      "formName" : "myFormName"
+    } ]
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detail error message from request if error occur
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages return from search
+pagination.totalElements
+Number
+Total elements return from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].studyKey
+String
+Unique study key for a given study
+data[].intervalId
+Number
+Unique system identifier for Interval
+data[].intervalName
+String
+User defined interval/visit name
+data[].intervalDescription
+String
+User defined interval/visit description
+data[].intervalSequence
+Number
+User defined sequence of interval
+data[].intervalGroupId
+Number
+User defined interval groupId
+data[].intervalGroupName
+String
+User defined interval group name
+data[].timeline
+String
+Type of Interval Visit Window. Valid responses: None, Due Date, Start - End Date, or Actual Date
+data[].definedUsingInterval
+String
+The baseline Interval where the calculate from date is collected
+data[].windowCalculationForm
+String
+The baseline Form where the calculate from date is collected
+data[].windowCalculationDate
+String
+The baseline Field where the calculate from date is collected
+data[].actualDateForm
+String
+The actual date Form for a specific Interval
+data[].actualDate
+String
+The actual date Field for a specific Interval
+data[].dueDateWillBeIn
+Number
+The number of days the actual date is due from the calculate from date
+data[].negativeSlack
+Number
+The number of negative days allowed from the due date
+data[].positiveSlack
+Number
+The number of positive days allowed from the due date
+data[].eproGracePeriod
+Number
+The number of positive days allowed for ePRO from the due date
+data[].forms[].formId
+Number
+Form ID
+data[].forms[].formKey
+String
+Form Key
+data[].forms[].formName
+String
+Form name
+data[].disabled
+Boolean
+Interval form is soft delete status
+data[].dateCreated
+String
+Date when this interval was created
+data[].dateModified
+String
+Date when this interval was last modified
+
+=== https://portal.prod.imednetapi.com/docs/jobs ===
+Jobs endpoint
+Given a batch ID, fetch the job information. A job is an API operation that is created by submitting request to
+the
+POST
+records endpoint.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/MOCK-STUDY/jobs/f89ceda2-f7c8-4939-859e-d3e967f315a1 HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/jobs/{batchId}
+Parameter
+Description
+studyKey
+Study Key to retrieve job state
+batchId
+Batch ID that is provided from the postRecords endpoint
+Response body
+Below is an example response payload.
+{
+  "jobId" : "930720e7-4f3b-4452-be2b-f4233e5f433b",
+  "batchId" : "9e9e8584-0c71-40f2-86ee-7d414766f7f2",
+  "state" : "completed",
+  "dateCreated" : "2020-12-01 21:47:36",
+  "dateStarted" : "2020-12-01 21:47:42",
+  "dateFinished" : "2020-12-01 21:47:45"
+}
+Response fields
+Path
+Type
+Description
+jobId
+String
+Job ID
+batchId
+String
+Batch ID
+state
+String
+State of the job
+dateCreated
+String
+Timestamp when this job was created
+dateStarted
+String
+Timestamp when the job started running
+dateFinished
+String
+Timestamp when the job was completed
+
+=== https://portal.prod.imednetapi.com/docs/queries ===
+Queries endpoint
+Given a StudyKey, fetch the set of queries. A query is a conduct resource that encapsulates dialogue pertaining to
+specific eCRF responses or other matters relevant to the conduct of the study.  Queries may be user-initiated, or
+automatically applied according to study protocol criteria.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/batchId/queries?page=0&size=25&sort=annotationId%2CASC&filter=variable%3D%3Daeterm HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/queries
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of query
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+annotationId,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to filter section for details.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/batchId/queries",
+    "timestamp" : "2025-06-05 21:12:09",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "annotationId",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "studyKey" : "PHARMADEMO",
+    "subjectId" : 1,
+    "subjectOid" : "OID-1",
+    "annotationType" : "subject",
+    "annotationId" : 1,
+    "type" : null,
+    "description" : "Monitor Query",
+    "recordId" : 123,
+    "variable" : "aeterm",
+    "subjectKey" : "123-005",
+    "dateCreated" : "2025-06-05 21:12:09",
+    "dateModified" : "2025-06-05 21:12:10",
+    "queryComments" : [ {
+      "sequence" : 1,
+      "annotationStatus" : "Monitor Query Open",
+      "user" : "john",
+      "comment" : "Added comment to study",
+      "closed" : false,
+      "date" : "2025-06-05 21:12:09"
+    } ]
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detail error message from request if error occur
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages return from search
+pagination.totalElements
+Number
+Total elements return from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].studyKey
+String
+Unique study key for a given study
+data[].subjectId
+Number
+Mednet Subject ID
+data[].subjectOid
+String
+Client-assigned subject OID
+data[].annotationType
+String
+User defined identifier for Query Type
+data[].annotationId
+Number
+Unique system identifier for Query Instance
+data[].type
+Null
+System text identifier for query type/location. Valid responses are subject|record|question
+data[].description
+String
+Query description
+data[].subjectKey
+String
+Protocol-assigned subject identifier
+data[].recordId
+Number
+Unique system identifier for Record
+data[].variable
+String
+User defined field identifier
+data[].queryComments[].sequence
+Number
+Query sequence
+data[].queryComments[].user
+String
+User performing Query action
+data[].queryComments[].annotationStatus
+String
+User defined Query status
+data[].queryComments[].comment
+String
+User comments applied at time of Query action
+data[].queryComments[].closed
+Boolean
+Query moved to closed status
+data[].queryComments[].date
+String
+Date of Query Comment
+data[].dateCreated
+String
+Date when the query was created
+data[].dateModified
+String
+Date when the query was modified
+
+=== https://portal.prod.imednetapi.com/docs/record-revisions ===
+Record Revisions endpoint
+Given a StudyKey, fetch the set of record revisions. Each record revision represents a distinct state (revision) in
+the lifecycle of a record.  Record revisions are related to records in that each record has one-to-many record revisions.
+Any time data is modified on a record, or a record progresses to a new status, a new record revision is captured.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/PHARMADEMO/recordRevisions?page=0&size=25&sort=recordRevisionId%2CASC&filter=subjectKey%3D%3D270 HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/recordRevisions
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of record revisions
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+recordRevisionId,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to filter section for details.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/PHARMADEMO/recordRevisions",
+    "timestamp" : "2025-06-05 21:12:09",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "recordRevisionId",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "studyKey" : "PHARMADEMO",
+    "recordRevisionId" : 1,
+    "recordId" : 1,
+    "recordOid" : "REC-1",
+    "recordRevision" : 1,
+    "dataRevision" : 1,
+    "recordStatus" : "Record Complete",
+    "subjectId" : 247,
+    "subjectOid" : "OID-1",
+    "subjectKey" : "001-003",
+    "siteId" : 2,
+    "formKey" : "AE",
+    "intervalId" : 15,
+    "role" : "Research Coordinator",
+    "user" : "jdoe",
+    "reasonForChange" : "Data entry error",
+    "deleted" : true,
+    "dateCreated" : "2025-06-05 21:12:09"
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detailed error message from request if an error occured
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages returned from search
+pagination.totalElements
+Number
+Total elements returned from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].studyKey
+String
+Unique study key for a given study
+data[].recordRevisionId
+Number
+Unique system identifier for the record revision
+data[].recordId
+Number
+Unique system identifier for the related record
+data[].recordOid
+String
+Client-assigned record OID
+data[].recordRevision
+Number
+Record revision number
+data[].dataRevision
+Number
+Data revision number
+data[].recordStatus
+String
+User defined record status
+data[].subjectId
+Number
+Mednet Subject ID
+data[].subjectOid
+String
+Client-assigned subject OID
+data[].subjectKey
+String
+Protocol-assigned subject identifier
+data[].siteId
+Number
+Unique system identifier for the related site
+data[].formKey
+String
+Form key
+data[].intervalId
+Number
+Unique system identifier for Interval
+data[].role
+String
+Role name of the user who saved the record revision
+data[].user
+String
+Username of the user who saved the record revision
+data[].reasonForChange
+String
+Record revision’s Reason For Change data
+data[].deleted
+Boolean
+Record deleted flag
+data[].dateCreated
+String
+Date when this record revision was created
+
+=== https://portal.prod.imednetapi.com/docs/records ===
+Records endpoint
+Given a StudyKey, fetch the set of records. A record is a conduct resource that represents a single instance of an
+electronic case report form (eCRF). Each record contains the responses to each question on the eCRF.
+Accessing the index
+A
+GET
+request is used to access the index.
+A
+POST
+request is used to add records to the iMednet database.
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/records
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of records
+GET
+Requests
+GET
+Request structure
+GET /api/v1/edc/studies/PHARMADEMO/records?page=0&size=25&sort=recordId%2CASC&filter=recordId%3D%3D5510&recordDataFilter=aeterm%3D%3DBronchitis HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+GET
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+recordId,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to Common filter section for details.
+recordDataFilter
+Optional record data filter search criteria. Must follow correct syntax. Refer to Common record data filter section for details.
+GET
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/PHARMADEMO/records",
+    "timestamp" : "2025-06-05 21:12:09",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "recordId",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "studyKey" : "PHARMADEMO",
+    "intervalId" : 99,
+    "formId" : 10202,
+    "formKey" : "AE",
+    "siteId" : 128,
+    "recordId" : 1,
+    "recordOid" : "REC-1",
+    "recordType" : "SUBJECT",
+    "recordStatus" : "Record Incomplete",
+    "deleted" : false,
+    "dateCreated" : "2025-06-05 21:12:09",
+    "dateModified" : "2025-06-05 21:12:10",
+    "subjectId" : 326,
+    "subjectOid" : "OID-1",
+    "subjectKey" : "123-456",
+    "visitId" : 1,
+    "parentRecordId" : 34,
+    "keywords" : [ {
+      "keywordName" : "Data Entry Error",
+      "keywordKey" : "DEE",
+      "keywordId" : 15362,
+      "dateAdded" : "2025-06-05 21:12:09"
+    } ],
+    "recordData" : {
+      "dateCreated" : "2018-10-18 06:21:46",
+      "unvnum" : "1",
+      "dateModified" : "2018-11-18 07:11:16",
+      "aeser" : "",
+      "aeterm" : "Bronchitis"
+    }
+  } ]
+}
+GET
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detail error message from request if error occur
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages return from search
+pagination.totalElements
+Number
+Total elements return from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].studyKey
+String
+Unique study key for a given study
+data[].intervalId
+Number
+Unique system identifier for Interval
+data[].formId
+Number
+Form ID
+data[].formKey
+String
+Form Key
+data[].siteId
+Number
+Unique system identifier for site
+data[].recordId
+Number
+Unique system identifier for record
+data[].recordOid
+String
+Client-assigned record OID
+data[].recordType
+String
+Type of record
+data[].recordStatus
+String
+User defined record status
+data[].subjectId
+Number
+Mednet Subject ID
+data[].subjectOid
+String
+Client-assigned subject OID
+data[].subjectKey
+String
+Protocol-assigned subject identifier
+data[].visitId
+Number
+Unique system identifier for the subject visit instance
+data[].keywords
+Array
+All keywords currently associated with the record
+data[].recordData
+Object
+Record data detail
+data[].deleted
+Boolean
+Record deleted flag
+data[].parentRecordId
+Number
+Parent Record Id
+data[].dateCreated
+String
+Date when this record was created
+data[].dateModified
+String
+Last date modified of this record
+POST
+Requests
+Providing a
+studyKey
+and a
+requestBody
+, adds a record to the iMednet database. The
+requestBody
+is an array. The contents
+of the
+requestBody
+determine if the request will register a subject, update a scheduled record, or create a new record.
+requestBody
+examples can be seen below for each different scenario. Different identifiers may be used in the
+requestBody
+, these
+identifiers can be seen in the table below:
+Request structure
+POST /api/v1/edc/studies/PHARMADEMO/records HTTP/1.1
+x-email-notify: user@domain.com
+Accept: application/json
+Content-Type: application/json
+Host: localhost:8080
+
+[ ]
+Table 2.
+POST
+Request Identifiers
+Identifier
+Name
+Description
+Form Identifiers
+formKey
+formId
+User defined form key
+System generated form identifier
+Site Identifiers
+siteName
+siteId
+User defined site name
+System generated site identifier
+Subject Identifiers
+subjectKey
+subjectId
+subjectOid
+Patient Display ID Full
+System generated subject identifier
+User assigned subject OID
+Interval Identifiers
+intervalName
+intervalId
+User defined interval name
+System generated interval identifier
+Record Identifiers
+recordId
+recordOid
+System generated record identifier
+User defined record OID
+Field Types
+When making a
+POST
+request to the records endpoint, be sure to use the correct type for any fields/attributes included in the
+data
+object.
+Sample request body containing all of the valid field types:
+[ {
+  "formKey" : "REG",
+  "siteName" : "Minneapolis",
+  "data" : {
+    "textField" : "Text data",
+    "dateField" : "2020-01-20",
+    "numberField" : 11,
+    "radioField" : "Yes",
+    "dropdownField" : "Always",
+    "memoField" : "Memo data",
+    "checkboxField" : true
+  }
+} ]
+Valid field types:
+Path
+Type
+Description
+[].formKey
+String
+Form Key
+[].siteName
+String
+Site Name
+[].data
+Object
+Data for specific record
+[].data.textField
+String
+Text field
+[].data.dateField
+String
+Date field
+[].data.numberField
+Number
+Number field
+[].data.radioField
+String
+Radio field
+[].data.dropdownField
+String
+Dropdown field
+[].data.memoField
+String
+Memo field
+[].data.checkboxField
+Boolean
+Checkbox field
+Register Subject
+Request body for registering a subject:
+[ {
+  "formKey" : "REG",
+  "siteName" : "Minneapolis",
+  "data" : {
+    "textField" : "Text value"
+  }
+} ]
+Request fields for registering a subject:
+Path
+Type
+Description
+[].formKey
+String
+Form Key
+[].siteName
+String
+Site Name
+[].data
+Object
+Data for specific record
+[].data.textField
+String
+Text field
+Update a Scheduled Record
+Request body for updating a scheduled record:
+[ {
+  "formKey" : "REG",
+  "subjectKey" : "651-042",
+  "intervalName" : "Registration",
+  "data" : {
+    "textField" : "Text value"
+  }
+} ]
+Request fields for updating a scheduled record:
+Path
+Type
+Description
+[].formKey
+String
+Form Key
+[].subjectKey
+String
+Subject Key
+[].intervalName
+String
+Interval Name
+[].data
+Object
+Data for specific record
+[].data.textField
+String
+Text field
+Create a New Record
+Request body for creating a new record:
+[ {
+  "formKey" : "REG",
+  "subjectKey" : "123-876",
+  "data" : {
+    "textField" : "Text value"
+  }
+} ]
+Request fields for creating a new record:
+Path
+Type
+Description
+[].formKey
+String
+Form Key
+[].subjectKey
+String
+Subject Key
+[].data
+Object
+Data for specific record
+[].data.textField
+String
+Text field
+Response body
+Below is an example response payload. The
+POST
+request will return a
+batchId
+and a
+state
+which can be used to
+check on the status of the record being added to the iMednet database via
+GET
+requests to the jobs endpoint.
+{
+  "jobId": "9663fe34-eec7-460a-a820-097f1eb2875e",
+  "batchId" : "c3q191e4-f894-72cd-a753-b37283eh0866",
+  "state": "created"
+}
+
+=== https://portal.prod.imednetapi.com/docs/sites ===
+Sites endpoint
+Given a StudyKey, fetch the set of sites. A site is a conduct resource that represents a single hospital, clinic, or
+other type of geographic entity which will contain subjects that participate in the study.
+Sites are related to subjects in that any site has one-to-many subjects.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/PHARMADEMO/sites?page=0&size=25&sort=siteId%2CASC&filter=siteId%3D%3D48 HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/sites
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of sites that belong to particular study.
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+siteId,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to filter section for details.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/PHARMADEMO/sites",
+    "timestamp" : "2025-06-05 21:12:09",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "siteId",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "studyKey" : "PHARMADEMO",
+    "siteId" : 1,
+    "siteName" : "Mock Site 1",
+    "siteEnrollmentStatus" : "Enrollment Open",
+    "dateCreated" : "2025-06-05 21:12:09",
+    "dateModified" : "2025-06-05 21:12:10"
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detail error message from request if error occur
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages return from search
+pagination.totalElements
+Number
+Total elements return from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].studyKey
+String
+Unique study key for a given study
+data[].siteId
+Number
+Unique site Id
+data[].siteName
+String
+Site name
+data[].siteEnrollmentStatus
+String
+Status of site enrollment
+data[].dateCreated
+String
+Date when this record was created
+data[].dateModified
+String
+Last date modified of this record
+
+=== https://portal.prod.imednetapi.com/docs/studies ===
+Studies endpoint
+Given an API Key, fetch the set of studies. Only studies that the API key is authorized to view will be included in the response.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies?page=0&size=25&sort=studyKey%2CASC&filter=studyKey%3D%3DPHARMADEMO HTTP/1.1
+x-imn-security-key: my-security-key
+x-api-key: my-api-token
+Content-Type: application/json
+Host: localhost:8080
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+studyKey,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to filter section for details.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies",
+    "timestamp" : "2025-06-05 21:12:08",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "studyKey",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "sponsorKey" : "100",
+    "studyKey" : "PHARMADEMO",
+    "studyId" : 100,
+    "studyName" : "iMednet Pharma Demonstration Study",
+    "studyDescription" : "iMednet Demonstration Study v2 Created 05April2018 After A5 Release",
+    "studyType" : "STUDY",
+    "dateCreated" : "2025-06-05 21:12:08",
+    "dateModified" : "2025-06-05 21:12:09"
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detail error message from request if error occur
+pagination.currentPage
+Number
+Current error page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages return from search
+pagination.totalElements
+Number
+Total elements return from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].sponsorKey
+String
+Sponsor key that this study is belong to
+data[].studyKey
+String
+Unique study key
+data[].studyId
+Number
+Mednet study ID
+data[].studyName
+String
+Study name
+data[].studyDescription
+String
+Study description detail
+data[].studyType
+String
+The type of study
+data[].dateCreated
+String
+Date when this record was created
+data[].dateModified
+String
+Last date modified of this record
+
+=== https://portal.prod.imednetapi.com/docs/subjects ===
+Subjects endpoint
+Given a StudyKey, fetch the set of subjects. A subject is a conduct resource that represents a single
+participant in a study. Subjects are related to records in that each subject has one-to-many records.
+Subjects are related to sites in that each subject belongs to a site.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/PHARMADEMO/subjects?page=0&size=25&sort=subjectId%2CASC&filter=subjectId%3D%3D370 HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/subjects
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of subjects
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+subjectId,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to filter section for details.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/PHARMADEMO/subjects",
+    "timestamp" : "2025-06-05 21:12:09",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "subjectId",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "studyKey" : "PHARMADEMO",
+    "subjectId" : 1,
+    "subjectOid" : "OID-1",
+    "subjectKey" : "01-001",
+    "subjectStatus" : "Enrolled",
+    "siteId" : 128,
+    "siteName" : "Chicago Hope Hospital",
+    "deleted" : false,
+    "enrollmentStartDate" : "2025-06-05 21:12:09",
+    "dateCreated" : "2025-06-05 21:12:09",
+    "dateModified" : "2025-06-05 21:12:10",
+    "keywords" : [ {
+      "keywordName" : "Data Entry Error",
+      "keywordKey" : "DEE",
+      "keywordId" : 15362,
+      "dateAdded" : "2025-06-05 21:12:09"
+    } ]
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detail error message from request if error occur
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages return from search
+pagination.totalElements
+Number
+Total elements return from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].studyKey
+String
+Unique study key for a given study
+data[].subjectId
+Number
+Mednet Subject ID
+data[].subjectOid
+String
+Client-assigned subject OID
+data[].subjectKey
+String
+Protocol-assigned subject identifier
+data[].subjectStatus
+String
+Subject status
+data[].siteId
+Number
+Mednet Site ID
+data[].siteName
+String
+Site name
+data[].enrollmentStartDate
+String
+Enrollment start date
+data[].deleted
+Boolean
+Subject deleted flag
+data[].dateCreated
+String
+Date when this subject was created
+data[].dateModified
+String
+Last date modified of this subject
+data[].keywords
+Array
+All keywords associated with the subject
+
+=== https://portal.prod.imednetapi.com/docs/users ===
+Users endpoint
+Given a StudyKey, fetch the users.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/MOCK-STUDY/users?page=0&size=25&includeInactive=false&sort=login%2CASC HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/users
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of variables
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+login,asc
+.
+includeInactive
+Boolean flag whether to include inactive Users. Default value is
+false
+.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/MOCK-STUDY/users",
+    "timestamp" : "2025-06-05 21:12:07",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "login",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "userId" : "685253e1-1a95-4352-a7b0-4c62d3807727",
+    "login" : "wsmith1",
+    "firstName" : "William",
+    "lastName" : "Smith",
+    "email" : "wsmith@mednet.com",
+    "userActiveInStudy" : true,
+    "roles" : [ {
+      "dateCreated" : [ 2025, 6, 5, 21, 12, 7, 625000000 ],
+      "dateModified" : [ 2025, 6, 5, 21, 12, 7, 625000000 ],
+      "roleId" : "6ec2a32b-143c-43d3-b562-9d902a61f884",
+      "communityId" : 1,
+      "name" : "Role name 1",
+      "description" : "Role description 1",
+      "level" : 1,
+      "type" : "Role type 1",
+      "inactive" : false
+    }, {
+      "dateCreated" : [ 2025, 6, 5, 21, 12, 7, 625000000 ],
+      "dateModified" : [ 2025, 6, 5, 21, 12, 7, 625000000 ],
+      "roleId" : "6ec2a32b-143c-43d3-b562-9d902a61f884",
+      "communityId" : 2,
+      "name" : "Role name 2",
+      "description" : "Role description 2",
+      "level" : 2,
+      "type" : "Role type 2",
+      "inactive" : false
+    } ]
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detail error message from request if error occur
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages return from search
+pagination.totalElements
+Number
+Total elements return from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].userId
+String
+User ID
+data[].login
+String
+Login
+data[].firstName
+String
+First name
+data[].lastName
+String
+Last name
+data[].email
+String
+Email
+data[].userActiveInStudy
+Boolean
+Boolean value for if the user is active in the study
+data[].roles[].dateCreated
+Array
+Role date created
+data[].roles[].dateModified
+Array
+Role date modified
+data[].roles[].roleId
+String
+Role ID
+data[].roles[].communityId
+Number
+Community ID associated with Role
+data[].roles[].name
+String
+Role name
+data[].roles[].description
+String
+Role description
+data[].roles[].level
+Number
+Role level
+data[].roles[].type
+String
+Role type
+data[].roles[].inactive
+Boolean
+Inactive
+
+=== https://portal.prod.imednetapi.com/docs/variables ===
+Variables endpoint
+Given a StudyKey, fetch the set of variables. A variable is a data point on an electronic clinical case report form
+(eCRF). An eCRF contains many variables. Variables are related to records in that each record will contain responses to
+each variable on the eCRF, within the recordData property.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/PHARMADEMO/variables?page=0&size=25&sort=variableId%2CASC&filter=variableId%3D%3D10299 HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/variables
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of variables
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+formId,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to filter section for details.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/PHARMADEMO/variables",
+    "timestamp" : "2025-06-05 21:12:08",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "variableId",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "studyKey" : "PHARMADEMO",
+    "variableId" : 1,
+    "variableType" : "RADIO",
+    "variableName" : "Pain Level",
+    "sequence" : 1,
+    "revision" : 1,
+    "disabled" : false,
+    "dateCreated" : "2025-06-05 21:12:08",
+    "dateModified" : "2025-06-05 21:12:09",
+    "formId" : 108727,
+    "variableOid" : "OID-1",
+    "deleted" : false,
+    "formKey" : "FORM_1",
+    "formName" : "Pre-procedure screening",
+    "label" : "Select patient pain level between 1 and 10",
+    "blinded" : false
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detail error message from request if error occur
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages return from search
+pagination.totalElements
+Number
+Total elements return from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].studyKey
+String
+Unique study key for a given study
+data[].variableId
+Number
+Mednet Variable ID
+data[].variableType
+String
+Variable Type
+data[].variableName
+String
+Name of the variable on the eCRF
+data[].sequence
+Number
+User defined sequence of variable
+data[].revision
+Number
+Number of modifications of the form metadata
+data[].disabled
+Boolean
+Variable disabled flag
+data[].dateCreated
+String
+Date when this form was created
+data[].dateModified
+String
+Date when this form was last modified
+data[].formId
+Number
+Mednet Form ID
+data[].variableOid
+String
+Client-assigned variable OID
+data[].deleted
+Boolean
+Variable deleted flag
+data[].formKey
+String
+Form key
+data[].formName
+String
+Name of the eCRF
+data[].label
+String
+User defined field identifier
+data[].blinded
+Boolean
+Blinded flag
+
+=== https://portal.prod.imednetapi.com/docs/visits ===
+Visits endpoint
+Given a StudyKey, fetch the set of visits. A visit is a conduct resource that represents a single instance of an
+interval for a subject.
+Accessing the index
+A
+GET
+request is used to access the index
+Request structure
+GET /api/v1/edc/studies/PHARMADEMO/visits?page=0&size=25&sort=visitId%2CASC&filter=subjectKey%3D%3D270 HTTP/1.1
+Content-Type: application/json
+Host: localhost:8080
+Path parameters
+Path parameters are required.
+Table 1. /api/v1/edc/studies/{studyKey}/visits
+Parameter
+Description
+studyKey
+StudyKey to retrieve list of visits
+Request parameters
+Request parameters are optional. Default values are used unless specified.
+Parameter
+Description
+page
+Which index page to be returned. Default value is 0.
+size
+Items per page to be returned. Default value is 25. Maximum items allowed per page is 500
+sort
+Name of the property by which to sort the result set. To sort in a particular direction add a comma to the property name and either
+asc
+or
+desc
+. To sort by multiple properties add additional
+sort
+parameters. Default value is
+visitId,asc
+.
+filter
+Optional filter search criteria. Must follow correct syntax. Refer to filter section for details.
+Response body
+Below is an example response payload.
+{
+  "metadata" : {
+    "status" : "OK",
+    "method" : "GET",
+    "path" : "/api/v1/edc/studies/PHARMADEMO/visits",
+    "timestamp" : "2025-06-05 21:12:08",
+    "error" : { }
+  },
+  "pagination" : {
+    "currentPage" : 0,
+    "size" : 25,
+    "totalPages" : 1,
+    "totalElements" : 1,
+    "sort" : [ {
+      "property" : "visitId",
+      "direction" : "ASC"
+    } ]
+  },
+  "data" : [ {
+    "visitId" : 1,
+    "studyKey" : "PHARMADEMO",
+    "intervalId" : 13,
+    "intervalName" : "Day 15",
+    "subjectId" : 247,
+    "subjectKey" : "111-005",
+    "startDate" : "2025-06-05",
+    "endDate" : "2025-06-12",
+    "dueDate" : null,
+    "visitDate" : "2025-06-07",
+    "visitDateForm" : "Follow Up",
+    "deleted" : false,
+    "visitDateQuestion" : "AESEV",
+    "dateCreated" : "2025-06-05 21:12:08",
+    "dateModified" : "2025-06-05 21:12:08"
+  } ]
+}
+Response fields
+Path
+Type
+Description
+metadata.status
+String
+Http status
+metadata.method
+String
+Http method
+metadata.path
+String
+Requested URI path
+metadata.timestamp
+String
+Timestamp when response was generated
+metadata.error
+Object
+Detailed error message from request if an error occured
+pagination.currentPage
+Number
+Current index page
+pagination.size
+Number
+Size per page
+pagination.totalPages
+Number
+Total pages returned from search
+pagination.totalElements
+Number
+Total elements returned from search
+pagination.sort[].property
+String
+Sort property
+pagination.sort[].direction
+String
+Sort direction
+data[].studyKey
+String
+Unique study key for a given study
+data[].subjectId
+Number
+Mednet Subject ID
+data[].subjectKey
+String
+Protocol-assigned subject identifier
+data[].visitId
+Number
+Unique system identifier for the subject visit instance
+data[].intervalId
+Number
+Unique system indentifier for the related interval
+data[].intervalName
+String
+User defined identifier for the related interval
+data[].startDate
+String
+Subject visit Start Date defined in interval visit window
+data[].dueDate
+Null
+Subject visit Due Date defined in interval visit window
+data[].endDate
+String
+Subject visit End Date defined in interval visit window
+data[].visitDate
+String
+Subject visit Actual Date defined in interval visit window
+data[].visitDateForm
+String
+Actual Date Form defined in interval visit window
+data[].deleted
+Boolean
+Subject visit deleted flag
+data[].visitDateQuestion
+String
+User defined field identifier
+data[].dateCreated
+String
+Date when this visit was created
+data[].dateModified
+String
+Date when this visit was last modified
