@@ -1,3 +1,0 @@
-[submodule "dependencies/imednet-python-sdk"]
-	path = dependencies/imednet-python-sdk
-	url = https://github.com/fderuiter/imednet-python-sdk.git
