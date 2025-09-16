@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION extract_single_form_udf(form_id INTEGER, form_key STR
 RETURNS VARIANT
 LANGUAGE PYTHON
 RUNTIME_VERSION = '3.11'
-IMPORTS = ('@cosira_imednet_repo/branches/main/dependencies/imednet-python-sdk/imednet/')
+IMPORTS = ('@cosira_imednet_repo/branches/main/dependencies/imednet-python-sdk/')
 HANDLER = 'extract_form'
 EXTERNAL_ACCESS_INTEGRATIONS = (cosira_imednet_integration)
 SECRETS = ('cred' = STAGING_PROD.IMEDNET.IMEDNET_API_SECRET)
